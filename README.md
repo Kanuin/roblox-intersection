@@ -1,4 +1,4 @@
 # Roblox intersection
-Repairable intersection system for fortnite
+Repairable intersection system for Roblox
 
 ## How to install
