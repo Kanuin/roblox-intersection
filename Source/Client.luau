@@ -211,14 +211,14 @@ player.PlayerGui.ChildAdded:Connect(function(child)
 	if child.Name == "SelectionGUI" then
 		if child:FindFirstChild("TrafficLightSystemByKanuin111") then
 			selectionui = child
-			selectionui.Exit.MouseButton1Click:Connect(function()
+			selectionui.List.Exit.MouseButton1Click:Connect(function()
 				local intersection = selectionui.Adornee.Parent.Parent.Parent.Parent.Parent.Parent
 				if not intersection then
 					return
 				end
 				game.ReplicatedStorage.TrafficLightSystem.ClosedCardMenu:FireServer(intersection)
 			end)
-			selectionui.Identify.MouseButton1Click:Connect(function()
+			selectionui.List.Identify.MouseButton1Click:Connect(function()
 				local intersection = selectionui.Adornee.Parent.Parent.Parent.Parent.Parent.Parent
 				if not intersection then
 					return
@@ -227,18 +227,31 @@ player.PlayerGui.ChildAdded:Connect(function(child)
 				local name = string.sub(card.Name, 6, -1)
 				local lamp = intersection:FindFirstChild(name, true)
 				if not lamp then
-					selectionui.Identify.Visible = false
+					selectionui.List.Identify.Visible = false
 					task.wait(0.2)
-					selectionui.Identify.Visible = true
-					selectionui.Identify.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
+					selectionui.List.Identify.Visible = true
+					selectionui.List.Identify.BackgroundColor3 = Color3.fromRGB(255, 96, 96)
 					task.wait(0.4)
-					selectionui.Identify.Visible = false
+					selectionui.List.Identify.Visible = false
 					task.wait(0.2)
-					selectionui.Identify.Visible = true
-					selectionui.Identify.BackgroundColor3 = Color3.fromRGB(50,50,50)
+					selectionui.List.Identify.Visible = true
+					selectionui.List.Identify.BackgroundColor3 = Color3.fromRGB(50,50,50)
 				else
 					identifyLamp(lamp)
 				end
+			end)
+			selectionui.List.Replace.MouseButton1Click:Connect(function()
+				local intersection = selectionui.Adornee.Parent.Parent.Parent.Parent.Parent.Parent
+				if not intersection then
+					return
+				end
+				local card = selectionui.Adornee.Parent
+				if not card then
+					return
+				end
+				
+				game.ReplicatedStorage.TrafficLightSystem.ClosedCardMenu:FireServer(intersection)
+				game.ReplicatedStorage.TrafficLightSystem.FixDevice:FireServer(card)
 			end)
 		end
 	end
