@@ -812,5 +812,6 @@ local errorcode = errorModule.createError(main.Phases.Phase1.Lamp1)
 table.insert(errors, {["Error"] = errorcode, ["Device"] = "Lamp1"})
 errorcode = errorModule.createError(main.Phases.Phase1.Pedestrian.PedestrianLamp3)
 table.insert(errors, {["Error"] = errorcode, ["Device"] = "PedestrianLamp3"})
+--]]
 errorcode = errorModule.createError(boxinside.Cards.Card_Lamp5)
 table.insert(errors, {["Error"] = errorcode, ["Device"] = "Card_Lamp5"})
