@@ -1,9 +1,10 @@
 --[[
 TODO:
 - Villogó hibák (ciklusos hibák)
-- Lámpa / kártya javítás
 - Control Panel function (soft shutdown, service mode)
-- Central configuration for errors every once and a while
+- kártya mouse over hint: kártya & lámpa status
+- amikor esc megnyomva a lámpa identifyolás közben, a kijelölés ottmaradt
+- kártya javítás animáció / minigame
 
 ]]--
 
@@ -144,13 +145,69 @@ local function generateRandomError(lamptype: string)
 	return currentErrors[math.random(1, errorCount)]
 end
 
+local function fix(device)
+	warn("fixing")
+	if not device then
+		error("no device")
+		return
+	end
+	if not device:FindFirstChild("Override") or not device:FindFirstChild("ErrorCode") then
+		error("no override or errorcode")
+		return
+	end
+	
+	local override = device.Override
+	local errorcode = device.ErrorCode
+	local deviceType = getDeviceType(device.Name)
+	local err = getErrorByErrorCode(deviceType, errorcode.Value)
+
+	if not err then
+		error("no error table")
+		return
+	end
+
+	override.Value = false
+	errorcode.Value = ""
+	err["OnFixFunc"](device)
+
+	if deviceType == "Lamp" or deviceType == "Pedestrian" then
+		local card = getCardByLamp(device)
+		if not card then
+			error("no card for lamp")
+			return
+		end
+
+		card.Override.Value = false
+		card.ErrorCode.Value = ""
+		card.Bad.Bulb.Material = Enum.Material.Mud
+		card.Good.Bulb.Material = Enum.Material.Neon
+		
+		if device:FindFirstChild("PromptPart") then
+			device.PromptPart:Destroy()
+		end
+	else
+		local lamp = getLampByCard(device)
+		if not lamp then
+			error("no lamp for card")
+			return
+		end
+
+		lamp.Override.Value = false
+		lamp.ErrorCode.Value = ""
+	end
+	
+	local intersection = device:FindFirstAncestor("Intersection")
+	if intersection then
+		intersection.Scripting.RemoveError:Fire(device)
+	end
+end
 
 ---------------------------------------------------------------------------
 -- // MAIN FUNCTION // ---- // MAIN FUNCTION // ---- // MAIN FUNCTION // --
 ---------------------------------------------------------------------------
 
 
-local function displayError(device, deviceError)
+local function displayError(device:Model, deviceError)
 	if not device then
 		return
 	end
@@ -191,6 +248,30 @@ local function displayError(device, deviceError)
 		card.Override.Value = true
 		card.Good.Bulb.Material = Enum.Material.Mud
 		card.Bad.Bulb.Material = Enum.Material.Neon
+		
+		-- add fix prompt
+		lamp = device
+		if device:FindFirstChild("PromptPart") then
+			return
+		end
+		
+		local part = Instance.new("Part")
+		part.Parent = lamp
+		part.Name = "PromptPart"
+		part.CFrame = device:GetPivot()
+		part.Anchored = true
+		part.Transparency = 1
+		part.CanCollide = false
+		
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.Parent = part
+		prompt.ObjectText = "Traffic light"
+		prompt.ActionText = "Fix lamp"
+		prompt.RequiresLineOfSight = false
+		
+		prompt.Triggered:Connect(function(plr)
+			fix(lamp)
+		end)
 	end
 end
 
@@ -235,51 +316,7 @@ end
 
 -- Fix a device
 function module.fix(device: Instance)
-	warn("fixing")
-	if not device then
-		error("no device")
-		return
-	end
-	if not device:FindFirstChild("Override") or not device:FindFirstChild("ErrorCode") then
-		error("no override or errorcode")
-		return
-	end
-	
-	local override = device.Override
-	local errorcode = device.ErrorCode
-	local deviceType = getDeviceType(device.Name)
-	local err = getErrorByErrorCode(deviceType, errorcode.Value)
-	
-	if not err then
-		error("no error table")
-		return
-	end
-	
-	override.Value = false
-	errorcode.Value = ""
-	err["OnFixFunc"](device)
-	
-	if deviceType == "Lamp" or deviceType == "Pedestrian" then
-		local card = getCardByLamp(device)
-		if not card then
-			error("no card for lamp")
-			return
-		end
-		
-		card.Override.Value = false
-		card.ErrorCode.Value = ""
-		card.Bad.Bulb.Material = Enum.Material.Mud
-		card.Good.Bulb.Material = Enum.Material.Neon
-	else
-		local lamp = getLampByCard(device)
-		if not lamp then
-			error("no lamp for card")
-			return
-		end
-		
-		lamp.Override.Value = false
-		lamp.ErrorCode.Value = ""
-	end
+	fix(device)
 end
 
 function module.getErrors()
