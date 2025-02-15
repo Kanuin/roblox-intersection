@@ -413,7 +413,8 @@ local function errorCycle()
 			task.wait(waittime)
 			local deviceType = deviceTypes[math.random(1, #deviceTypes)]
 			local device = getRandomDevice(deviceType)
-			errorModule.createError(device)
+			local errorcode = errorModule.createError(device)
+			table.insert(errors, {["Error"] = errorcode, ["Device"] = device.Name})
 		end
 	end
 end
@@ -438,6 +439,7 @@ local function controlCabinetDisplayCycle()
 		while values.SystemIsOn.Value do
 			if #errors == 0 then -- If  0 (if table is empty)
 				cpscreen.L1.Text = "ALL SYSTEMS OPERATIONAL"
+				cpscreen.L2.Text = ""
 				currentErrorIndex = 0
 			else
 				cpscreen.L1.Text = "ERROR DETECTED"
@@ -541,6 +543,10 @@ for count, object in boxinside.Cards:GetChildren() do
 		guiClone = game.ReplicatedStorage.TrafficLightSystem.SelectionGUI:Clone()
 		guiClone.Adornee = object.Handle
 		guiClone.Parent = plr.PlayerGui
+		
+		if object.ErrorCode.Value == "" then
+			guiClone.List.Replace.Visible = false
+		end
 	end)
 end
 
@@ -553,6 +559,16 @@ game.ReplicatedStorage.TrafficLightSystem.ClosedCardMenu.OnServerEvent:Connect(f
 			end
 			values.CardSelectionActive.Value = true
 		end
+	end
+end)
+
+game.ReplicatedStorage.TrafficLightSystem.FixDevice.OnServerEvent:Connect(function(client, device)
+	if not device then
+		return
+	end
+	if client == values.CurrentPlayer.Value then -- if sent from correct client
+		errorModule.fix(device)
+		
 	end
 end)
 
@@ -743,6 +759,20 @@ end)
 -- // MAIN FUNCTION // --
 -------------------------
 
+script.Parent.RemoveError.Event:Connect(function(device:Instance)
+	if not device then 
+		return
+	end
+	for index, value in errors do
+		if value then
+			if value["Device"] == device.Name then
+				table.remove(errors, index)
+				return
+			end
+		end
+	end
+end)
+
 game.ReplicatedStorage.TrafficLightSystem.ClosedMenu.OnServerEvent:Connect(function()
 	if guiClone then
 		guiClone:Destroy()
@@ -774,10 +804,9 @@ turnOffIndicators()
 values.SystemIsOn.Value = true
 startCycle()
 startcontrolCabinetDisplayCycle()
-setDisplayErrorText(99)
---startErrorCycle()
+startErrorCycle()
 
-
+--[[
 task.wait(5)
 local errorcode = errorModule.createError(main.Phases.Phase1.Lamp1)
 table.insert(errors, {["Error"] = errorcode, ["Device"] = "Lamp1"})
@@ -785,51 +814,3 @@ errorcode = errorModule.createError(main.Phases.Phase1.Pedestrian.PedestrianLamp
 table.insert(errors, {["Error"] = errorcode, ["Device"] = "PedestrianLamp3"})
 errorcode = errorModule.createError(boxinside.Cards.Card_Lamp5)
 table.insert(errors, {["Error"] = errorcode, ["Device"] = "Card_Lamp5"})
-
---- ARCHIVE
-
---[[
-
-
-if object:IsA("Folder") then
-            for _, lamp in object:GetChildren() do
-                if lamp:IsA("Folder") then
-                    for _, pedestrianLamp in lamp:GetChildren() do
-                        cardlight(pedestrianLamp.Name, "Good", false)
-                        cardlight(pedestrianLamp.Name, "Bad", false)
-                    end
-                elseif lamp:IsA("Model") then
-                    cardlight(lamp.Name, "Good", false)
-					cardlight(lamp.Name, "Bad", false)
-					lamp.
-                end
-            end
-        end
-        
-        
-        
-        
-        
-        
-        
-        
-        		--if object.Name:sub(1, 4):lower() == "card" then
-		--	--table.remove(cards, count)
-		--	continue
-		--end
-		--if not table.find(script.Parent.Parent.Phases:GetDescendants(), object) then
-		--	table.insert(newCards, object)
-		--	continue
-		--end
-		--if deviceType == "pedestrianlamp" then
-		--	if not string.find(object.Name, "Pedestrian") then
-		--		table.insert(newCards, object)
-		--		continue
-		--	end
-		--elseif deviceType == "lamp" then
-		--	if not string.find(object.Name, "Lamp") then
-		--		table.insert(newCards, object)
-		--		continue
-		--	end
-		--end
-        ]]
