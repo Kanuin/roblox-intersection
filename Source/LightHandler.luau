@@ -1,3 +1,20 @@
+--[[
+    Light Handler
+    
+    Main functions for handling traffic lights of an intersection, including:
+    - cycle of traffic lights
+    - contol cabinet functions 
+    - generating random errors to fix
+    
+    Traffic lights can contain 3 or 2 lamps according to its usage:
+    - for vehicles contains 3 lamps: red, yellow and green (Piros, Sarga, Zold)
+    - for pedestrians contains 2 lamps: red and green (Piros, Zold)
+    
+    Traffic light cycle:
+    - for vehicles: red, red-yellow, green, yellow, red
+    - for pedestrians: red, green, flashing green, red
+]]
+
 ---------------------
 -- // VARIABLES // --
 ---------------------
@@ -61,20 +78,9 @@ local currentErrorIndex = 0
 -- // LOCAL FUNCTIONS // --
 ---------------------------
 
-local function animate(object, goal, animtime, style, direction)
-	local tweenInfo = TweenInfo.new(
-		animtime, -- Time
-		style or Enum.EasingStyle.Quint, -- EasingStyle
-		direction or Enum.EasingDirection.InOut, -- EasingDirection
-		0, -- RepeatCount
-		false, -- Reverses
-		0 -- DelayTime
-	)
-	local tween = TweenService:Create(object, tweenInfo, goal)
-	tween:Play()
-	return tween
-end
-
+--[[
+	Turns all the traffic lights off.
+]]
 local function turnOffAllLamps()
     print("Turning off all lamps")
     for _, object in main.Phases:GetChildren() do
@@ -95,7 +101,10 @@ local function turnOffAllLamps()
     end
 end
 
-local function cardlight(name, ledtype, turningOn)
+--[[
+	Sets the leds of a control card.
+]]
+local function cardlight(name, ledtype, turningOn) 
 	if main.Values.SystemIsOn.Value == false then
 		return
 	end
@@ -119,12 +128,16 @@ local function cardlight(name, ledtype, turningOn)
     end
 end
 
-local function pedestrian(phase, color, turingOn)
+--[[
+	Sets all the pedestrian lamps of given phase to given color.
+	When turningOn is false, lamp will be turned off. 
+]]
+local function pedestrian(phase:string, color: string, turningOn: boolean)
 	if main.Values.SystemIsOn.Value == false then
 		turnOffAllLamps()
 		return
 	end
-    print("Setting pedestrian lights for phase:", phase, color, "Turning on:", turingOn)
+    print("Setting pedestrian lights for phase:", phase, color, "Turning on:", turningOn)
     if main.Phases:FindFirstChild(phase) then
         local currentphase = main.Phases[phase]
         if currentphase:FindFirstChild("Pedestrian") then
@@ -141,7 +154,7 @@ local function pedestrian(phase, color, turingOn)
                         local GUI = object[color]["GUI"]
                         if GUI:FindFirstChild("SurfaceGui") then
                             local light = GUI.SurfaceGui.Color
-                            light.Visible = turingOn
+                            light.Visible = turningOn
                         end
                     end
                 end
@@ -150,7 +163,11 @@ local function pedestrian(phase, color, turingOn)
     end
 end
 
-local function light(phase, color, turningOn)
+--[[
+	Sets all the vahicle lamps of given phase to given color.
+	When turningOn is false, lamp will be turned off. 
+]]
+local function light(phase:string, color:string, turningOn:boolean)
 	if main.Values.SystemIsOn.Value == false then
 		turnOffAllLamps()
 		return
@@ -175,6 +192,9 @@ local function light(phase, color, turningOn)
     end
 end
 
+--[[
+	Sets the display of the control cabinet to saved one.
+]]
 local function loadScreen()
 	cpscreen.L1.Text = screenText[1]
 	cpscreen.L2.Text = screenText[2]
@@ -182,6 +202,9 @@ local function loadScreen()
 	cpscreen.L4.Text = screenText[4]
 end
 
+--[[
+	Saves the content of control cabinet display and clears it.
+]]
 local function turnOffScreen()
 	screenText[1] = cpscreen.L1.Text
 	screenText[2] = cpscreen.L2.Text
@@ -194,6 +217,9 @@ local function turnOffScreen()
 	cpscreen.L4.Text = ""
 end
 
+--[[
+	Sets the indicators of control cabinet to saved one.
+]]
 local function loadIndicators()
 	cpbuttons.InitializeCards.Indicator.Color = indicators["InitializeCards"]
 	cpbuttons.PauseCycle.Indicator.Color = indicators["PauseCycle"]
@@ -202,6 +228,9 @@ local function loadIndicators()
 	cpbuttons.StartCycle.Indicator.Color = indicators["StartCycle"]
 end
 
+--[[
+	Saves the indicators of control cabinet and turns them off
+]]
 local function turnOffIndicators()
 	indicators["InitializeCards"] = cpbuttons.InitializeCards.Indicator.Color
 	indicators["PauseCycle"] = cpbuttons.PauseCycle.Indicator.Color
@@ -216,6 +245,9 @@ local function turnOffIndicators()
 	cpbuttons.StartCycle.Indicator.Color = indOffColor
 end
 
+--[[
+	Sets the pedestrion lamp to flashing green.
+]]
 local function villogoZold(phase)
 	if main.Values.SystemIsOn.Value == false then
 		turnOffAllLamps()
@@ -230,6 +262,13 @@ local function villogoZold(phase)
     end
 end
 
+--[[
+	Initialize all the card leds:
+	- green led is on: card and its lamp works
+	- red led is on: its lamp failed
+	- both leds are on: card failure
+	- both leds are off: no lamp found for card
+]]
 local function initializeCardLights()
 	print("Initializing card lights")
 	cpbuttons.InitializeCards.Indicator.Color = indOnColor
@@ -281,6 +320,10 @@ local function initializeCardLights()
 	cpbuttons.InitializeCards.Indicator.Color = indOffColor
 end
 
+
+--[[
+	Turns all the card leds off.
+]]
 local function turnOffCardLights()
     print("Turning off card lights")
     for _, object in boxinside.Cards:GetChildren() do
@@ -289,7 +332,10 @@ local function turnOffCardLights()
     end
 end
 
---- @param deviceType Mit szeretnénk lekérni? Lamp, PedestrianLamp, Card?
+--[[
+	Returns with randomly a selected deevice (card or traffic light).
+	deviceType: "pedestrianlamp", "lamp" or "card"
+]]
 local function getRandomDevice(deviceType: string)
 	deviceType = deviceType:lower()
 	local cards = boxinside.Cards:GetChildren()
@@ -316,6 +362,9 @@ local function getRandomDevice(deviceType: string)
 	return randomDevice
 end
 
+--[[
+	Shows an error text on control cabinet display.
+]]
 local function setDisplayErrorText(errorindex: number)
 	if not errorindex then
 		error("no errorindex received")
@@ -331,10 +380,11 @@ local cycle = nil
 local errorcycle = nil
 local controlcabinetdisplaycycle = nil
 
-----------------------
--- ** LAMP CYCLE ** --
-----------------------
-
+--[[
+	Loops a lamp cycle:
+    - for vehicles: red, red-yellow, green, yellow, red
+    - for pedestrians: red, green, flashing green, red
+]]
 local function lampCycle()
 	if values.SystemIsOn.Value then
 		while values.SystemIsOn.Value do
@@ -386,6 +436,9 @@ local function lampCycle()
 	end
 end
 
+--[[
+	Starts an async (in coroutine) lamp cycle 
+]]
 local function startCycle()
 	cpbuttons.StartCycle.Indicator.Color = indOnColor
 	cpbuttons.PauseCycle.Indicator.Color = indOffColor
@@ -393,6 +446,9 @@ local function startCycle()
 	coroutine.resume(cycle)
 end
 
+--[[
+	Stops the previously started lamp cycle 
+]]
 local function stopCycle()
 	cpbuttons.PauseCycle.Indicator.Color = indOnColor
 	cpbuttons.StartCycle.Indicator.Color = indOffColor
@@ -401,10 +457,9 @@ local function stopCycle()
 	end
 end
 
-----------------------------------
--- ** ERROR GENERATION CYCLE ** --
-----------------------------------
-
+--[[
+	Loops error generation sequence. Randonly select a device and breaks it.
+]]
 local function errorCycle()
 	if values.SystemIsOn.Value then
 		while values.SystemIsOn.Value do
@@ -419,21 +474,26 @@ local function errorCycle()
 	end
 end
 
+--[[
+	Starts an async (in coroutine) error generation sequence
+]]
 local function startErrorCycle()
 	errorcycle = coroutine.create(errorCycle)
 	coroutine.resume(errorcycle)
 end
 
+--[[
+	Stops the previously started error generation sequence
+]]
 local function stopErrorCycle()
 	if errorcycle then
 		coroutine.close(errorcycle)
 	end
 end
 
-------------------------------------
--- ** CONTROL CABINTER DISPLAY ** --
-------------------------------------
-
+--[[
+	Updates contrtol cabinet display every 5 seconds
+]]
 local function controlCabinetDisplayCycle()
 	if values.SystemIsOn.Value then
 		while values.SystemIsOn.Value do
@@ -450,17 +510,26 @@ local function controlCabinetDisplayCycle()
 	end
 end
 
+--[[
+	Starts an async (in coroutine) control cabinet display update sequence 
+]]
 local function startcontrolCabinetDisplayCycle()
 	controlcabinetdisplaycycle = coroutine.create(controlCabinetDisplayCycle)
 	coroutine.resume(controlcabinetdisplaycycle)
 end
 
+--[[
+	Stops the previously started control cabinet display update sequence
+]]
 local function stopcontrolCabinetDisplayCycle()
 	if controlcabinetdisplaycycle then
 		coroutine.close(controlcabinetdisplaycycle)
 	end
 end
 
+--[[
+	Turns on/off intersection
+]]
 local function togglePower(turningOn)
     print("Toggling power. Turning on:", turningOn)
 	if not turningOn then
@@ -486,7 +555,11 @@ local function togglePower(turningOn)
     end
 end
 
---- @param moveTo: Instance -- The card to move the selection to
+--[[
+	Moves the selection outline to a card.
+	
+	moveTo: Model The card to move the selection to
+]] 
 local function moveSelection(moveTo: Model)
 	local selection = nil
 	if not moveTo then
@@ -495,13 +568,16 @@ local function moveSelection(moveTo: Model)
 	selection = moveTo.Parent.Parent.Card_selection
 	selection.Transparency = 0.5
 	local targetPos = moveTo.Body.Position
-	--animate(selection, { Position = targetPos}, 0.1)
 	selection.Position = targetPos
 end
 
 ----------------------------------
 -- // CONTROL PANEL FUNCTION // --
 ----------------------------------
+
+--[[
+	Binds card interactions
+]]
 local selection = boxinside.Card_selection
 local guiClone = nil
 for count, object in boxinside.Cards:GetChildren() do
@@ -512,6 +588,7 @@ for count, object in boxinside.Cards:GetChildren() do
 		continue
 	end
 	local clickdetector = object.ClickDetector
+	-- moving selection outline
 	clickdetector.MouseHoverEnter:Connect(function(plr)
 		if not values.CurrentPlayer.Value then
 			return
@@ -525,7 +602,7 @@ for count, object in boxinside.Cards:GetChildren() do
 		
 		moveSelection(object)
 	end)
-	
+	-- show context menu (identify, fix, exit)
 	clickdetector.MouseClick:Connect(function(plr)
 		if not values.CurrentPlayer.Value then
 			return
@@ -550,6 +627,9 @@ for count, object in boxinside.Cards:GetChildren() do
 	end)
 end
 
+--[[
+	Closing card context menu
+]]
 game.ReplicatedStorage.TrafficLightSystem.ClosedCardMenu.OnServerEvent:Connect(function(client, intersection)
 	if intersection == script.Parent.Parent then -- if target intersection is current intersection
 		if client == values.CurrentPlayer.Value then -- if sent from correct client
@@ -562,6 +642,9 @@ game.ReplicatedStorage.TrafficLightSystem.ClosedCardMenu.OnServerEvent:Connect(f
 	end
 end)
 
+--[[
+	"fix" context menu handling
+]]
 game.ReplicatedStorage.TrafficLightSystem.FixDevice.OnServerEvent:Connect(function(client, device)
 	if not device then
 		return
@@ -572,6 +655,10 @@ game.ReplicatedStorage.TrafficLightSystem.FixDevice.OnServerEvent:Connect(functi
 	end
 end)
 
+--[[
+	Hanldes control panel of control cabinet "start cycle" button,
+	which starts a new lamp cycle  
+]]
 cpbuttons.StartCycle.Button.ClickDetector.MouseClick:Connect(function(plr)
 	if values.SystemIsOn.Value == false then
 		return
@@ -601,6 +688,10 @@ cpbuttons.StartCycle.Button.ClickDetector.MouseClick:Connect(function(plr)
 	end
 end)
 
+--[[
+	Hanldes control panel of control cabinet "stop cycle" button,
+	which stops the current lamp cycle  
+]]
 cpbuttons.PauseCycle.Button.ClickDetector.MouseClick:Connect(function(plr)
 	if values.SystemIsOn.Value == false then
 		return
@@ -619,6 +710,10 @@ cpbuttons.PauseCycle.Button.ClickDetector.MouseClick:Connect(function(plr)
 	stopCycle()
 end)
 
+--[[
+	Turns on intersection service mode (every lamp flashes yellow)
+	TODO  
+]]
 cpbuttons.ServiceMode.Button.ClickDetector.MouseClick:Connect(function(plr)
 	if values.SystemIsOn.Value == false then
 		return
@@ -636,6 +731,11 @@ cpbuttons.ServiceMode.Button.ClickDetector.MouseClick:Connect(function(plr)
 	print(":: BUTTONS :: ServiceMode pressed")
 end)
 
+--[[
+	Waits for current cycle to be over and stops it.
+	Every lamp is "red" 
+	TODO  
+]]
 cpbuttons.SoftShutdown.Button.ClickDetector.MouseClick:Connect(function(plr)
 	if values.SystemIsOn.Value == false then
 		return
@@ -653,6 +753,11 @@ cpbuttons.SoftShutdown.Button.ClickDetector.MouseClick:Connect(function(plr)
 	print(":: BUTTONS :: SoftShutdown / HaltLights pressed")
 end)
 
+--[[
+	Initializes cards in the control cabinet.
+	- turns off the card leds
+	- initialize cards   
+]]
 cpbuttons.InitializeCards.Button.ClickDetector.MouseClick:Connect(function(plr)
 	if values.SystemIsOn.Value == false then
 		return
@@ -672,6 +777,9 @@ cpbuttons.InitializeCards.Button.ClickDetector.MouseClick:Connect(function(plr)
 	initializeCardLights()
 end)
 
+--[[
+	Inserts or removes "control key" to/from control cabinet. 
+]]
 controlpanel.Key.ClickBox.ClickDetector.MouseClick:Connect(function(plr)
 	if values.SystemIsOn.Value == false then
 		return
@@ -688,7 +796,9 @@ controlpanel.Key.ClickBox.ClickDetector.MouseClick:Connect(function(plr)
 	print(":: BUTTONS :: Key toggled")
 end)
 
--- ** USELESS BUTTONS ** --
+--[[
+	Desing button, never will have functionality assigned to it. 
+]]
 cpbuttons.Useless.ToggleBatteries.Button.ClickDetector.MouseClick:Connect(function(plr)
 	if values.SystemIsOn.Value == false then
 		return
@@ -705,6 +815,10 @@ cpbuttons.Useless.ToggleBatteries.Button.ClickDetector.MouseClick:Connect(functi
 	print(":: BUTTONS :: ToggleBatteries  pressed")
 end)
 
+--[[
+	Control cabinet display pager buttons.
+	Displays next error if any or starts it over
+]]
 controlpanel.SideButtons.Next.Label.ClickDetector.MouseClick:Connect(function(plr)
 	if values.SystemIsOn.Value == false then
 		return
@@ -730,6 +844,10 @@ controlpanel.SideButtons.Next.Label.ClickDetector.MouseClick:Connect(function(pl
 	controlpanel.SideButtons.Next.Indicator.Color = indOffColor
 end)
 
+--[[
+	Control cabinet display pager buttons.
+	Displays previous error if any or the last one
+]]
 controlpanel.SideButtons.Prev.Label.ClickDetector.MouseClick:Connect(function(plr)
 	if values.SystemIsOn.Value == false then
 		return
@@ -755,10 +873,26 @@ controlpanel.SideButtons.Prev.Label.ClickDetector.MouseClick:Connect(function(pl
 	controlpanel.SideButtons.Prev.Indicator.Color = indOffColor
 end)
 
+--[[
+	Turns on/off system value with control cabinet power switch.   
+]]
+powerSwitch.Interactive.ClickDetector.MouseClick:Connect(function(plr)
+	if values.CurrentPlayer.Value ~= plr then
+		return
+	end
+
+	print("Toggling power (mouse click) detected")
+	values.SystemIsOn.Value = not values.SystemIsOn.Value
+end)
+
 -------------------------
 -- // MAIN FUNCTION // --
 -------------------------
 
+--[[
+	RemoveError is Bindableevent that is called when an error is fixed.
+	Removes error from local errors table.  
+]]
 script.Parent.RemoveError.Event:Connect(function(device:Instance)
 	if not device then 
 		return
@@ -773,6 +907,9 @@ script.Parent.RemoveError.Event:Connect(function(device:Instance)
 	end
 end)
 
+--[[
+	User closes control cabinet.  
+]]
 game.ReplicatedStorage.TrafficLightSystem.ClosedMenu.OnServerEvent:Connect(function()
 	if guiClone then
 		guiClone:Destroy()
@@ -781,22 +918,16 @@ game.ReplicatedStorage.TrafficLightSystem.ClosedMenu.OnServerEvent:Connect(funct
 	values.CardSelectionActive.Value = true
 end)
 
-powerSwitch.Interactive.ClickDetector.MouseClick:Connect(function(plr)
-	if values.CurrentPlayer.Value ~= plr then
-		return
-	end
-	
-	print("Toggling power (mouse click) detected")
-	values.SystemIsOn.Value = not values.SystemIsOn.Value
-end)
-
+--[[
+	Detects changes of system power  
+]]
 values.SystemIsOn:GetPropertyChangedSignal("Value"):Connect(function()
     print("SystemIsOn value changed. Current value:", values.SystemIsOn.Value)
 	togglePower(values.SystemIsOn.Value)
 end)
 
 
-
+-- main starter functions 
 print("Script initialized")
 wait(1)
 turnOffScreen()
@@ -806,12 +937,14 @@ startCycle()
 startcontrolCabinetDisplayCycle()
 startErrorCycle()
 
+
+-- generates errors for debugging
 --[[
 task.wait(5)
 local errorcode = errorModule.createError(main.Phases.Phase1.Lamp1)
 table.insert(errors, {["Error"] = errorcode, ["Device"] = "Lamp1"})
 errorcode = errorModule.createError(main.Phases.Phase1.Pedestrian.PedestrianLamp3)
 table.insert(errors, {["Error"] = errorcode, ["Device"] = "PedestrianLamp3"})
---]]
 errorcode = errorModule.createError(boxinside.Cards.Card_Lamp5)
 table.insert(errors, {["Error"] = errorcode, ["Device"] = "Card_Lamp5"})
+--]]
